@@ -142,87 +142,123 @@ export function TradingPanel({ token, onOpenWindow }: TradingPanelProps) {
         </div>
 
         {tradeMode === "buy" ? (
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Amount in SOL</label>
-            <div className="flex gap-2">
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-muted-foreground">Amount in SOL</label>
+            
+            {/* One-click preset buttons */}
+            <div className="grid grid-cols-4 gap-2">
               {solBuyAmountPresets.map((preset) => (
                 <button
                   key={preset}
-                  onClick={() => setBuyAmount(preset.toString())}
+                  onClick={() => {
+                    // Toggle: if already selected, deselect; otherwise select
+                    if (buyAmount === preset.toString()) {
+                      setBuyAmount("");
+                    } else {
+                      setBuyAmount(preset.toString());
+                    }
+                  }}
                   className={cn(
-                    "flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-all",
+                    "py-2.5 px-3 rounded-lg text-sm font-semibold transition-all cursor-pointer",
                     buyAmount === preset.toString()
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                      ? "bg-green-500/20 text-green-500 border-2 border-green-500/50"
+                      : "bg-muted/30 text-muted-foreground hover:bg-muted/50 border-2 border-transparent"
                   )}
                 >
-                  {preset}
+                  {preset} SOL
                 </button>
               ))}
             </div>
-            <Input
-              type="number"
-              placeholder="0.00"
-              value={buyAmount}
-              onChange={(e) => setBuyAmount(e.target.value)}
-              min="0"
-              step="0.01"
-            />
-            <div className="text-xs text-muted-foreground">
-              Available: {solanaBalance.toFixed(4)} SOL
+
+            {/* Custom amount input */}
+            <div className="space-y-1">
+              <Input
+                type="number"
+                placeholder="Enter custom amount"
+                value={buyAmount}
+                onChange={(e) => setBuyAmount(e.target.value)}
+                min="0"
+                step="0.01"
+                className="w-full"
+              />
+              <div className="text-xs text-muted-foreground">
+                Available: {solanaBalance.toFixed(4)} SOL
+              </div>
             </div>
           </div>
         ) : (
           <div className="space-y-3">
-            <label className="text-sm text-muted-foreground">Sell Percentage</label>
-            <div className="flex gap-2">
+            <label className="text-sm font-medium text-muted-foreground">Percentage of Token Balance</label>
+            
+            {/* One-click percentage buttons */}
+            <div className="grid grid-cols-4 gap-2">
               {percentagePresets.map((preset) => (
                 <button
                   key={preset}
-                  onClick={() => setSellPercentage(preset.toString())}
+                  onClick={() => {
+                    // Toggle: if already selected, deselect; otherwise select
+                    if (sellPercentage === preset.toString()) {
+                      setSellPercentage("");
+                    } else {
+                      setSellPercentage(preset.toString());
+                    }
+                  }}
                   className={cn(
-                    "flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-all",
+                    "py-2.5 px-3 rounded-lg text-sm font-semibold transition-all cursor-pointer",
                     sellPercentage === preset.toString()
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                      ? "bg-red-500/20 text-red-500 border-2 border-red-500/50"
+                      : "bg-muted/30 text-muted-foreground hover:bg-muted/50 border-2 border-transparent"
                   )}
                 >
                   {preset}%
                 </button>
               ))}
             </div>
-            <Input
-              type="number"
-              placeholder="0"
-              value={sellPercentage}
-              onChange={(e) => setSellPercentage(e.target.value)}
-              min="0"
-              max="100"
-              step="1"
-            />
-            {sellPercentage && tokenBalance > 0 && (
-              <div className="text-xs text-muted-foreground">
-                Selling: {((tokenBalance * parseFloat(sellPercentage)) / 100).toLocaleString()} {tokenSymbol}
-              </div>
-            )}
+
+            {/* Custom percentage input */}
+            <div className="space-y-1">
+              <Input
+                type="number"
+                placeholder="Enter custom percentage"
+                value={sellPercentage}
+                onChange={(e) => setSellPercentage(e.target.value)}
+                min="0"
+                max="100"
+                step="1"
+                className="w-full"
+              />
+              {sellPercentage && tokenBalance > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Selling: {((tokenBalance * parseFloat(sellPercentage)) / 100).toLocaleString()} {tokenSymbol}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
+        {/* One-click trade button */}
         <button
           onClick={handleTrade}
           disabled={loading ||
-            (tradeMode === "buy" && (!buyAmount || parseFloat(buyAmount) <= 0)) ||
-            (tradeMode === "sell" && (!sellPercentage || parseFloat(sellPercentage) <= 0))
+            (tradeMode === "buy" && (!buyAmount || parseFloat(buyAmount) <= 0 || parseFloat(buyAmount) > solanaBalance)) ||
+            (tradeMode === "sell" && (!sellPercentage || parseFloat(sellPercentage) <= 0 || parseFloat(sellPercentage) > 100 || tokenBalance <= 0))
           }
           className={cn(
-            "w-full py-3 px-4 rounded-lg font-semibold transition-all",
+            "w-full py-3.5 px-4 rounded-lg font-bold text-base transition-all shadow-lg",
             tradeMode === "buy"
-              ? "bg-green-500 hover:bg-green-600 text-white disabled:bg-green-500/30 disabled:text-green-500/50"
-              : "bg-red-500 hover:bg-red-600 text-white disabled:bg-red-500/30 disabled:text-red-500/50",
-            "disabled:cursor-not-allowed"
+              ? "bg-green-500 hover:bg-green-600 text-white disabled:bg-green-500/30 disabled:text-green-500/50 disabled:shadow-none"
+              : "bg-red-500 hover:bg-red-600 text-white disabled:bg-red-500/30 disabled:text-red-500/50 disabled:shadow-none",
+            "disabled:cursor-not-allowed active:scale-95"
           )}
         >
-          {tradeMode === "buy" ? "Buy" : "Sell"} {tokenSymbol || "Token"}
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="animate-spin">⏳</span>
+              Processing...
+            </span>
+          ) : (
+            `One-Click ${tradeMode === "buy" ? "Buy" : "Sell"} ${tokenSymbol || "Token"}`
+          )}
         </button>
       </CardContent>
     </Card>
