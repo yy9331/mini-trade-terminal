@@ -2,10 +2,12 @@ import { Codex } from "@codex-data/sdk";
 import { Link, useParams } from "react-router-dom";
 import { useEffect, useState, Suspense } from "react";
 import { TokenChart, ChartDataPoint } from "@/components/TokenChart";
-import { TradingPanel } from "@/components/TradingPanel";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { TokenSidebar } from "@/components/TokenSidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EnhancedToken } from "@codex-data/sdk/dist/sdk/generated/graphql";
+import { cn } from "@/lib/utils";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 
 type TokenEvent = {
   id: string;
@@ -25,6 +27,7 @@ export default function TokenPage() {
   const [events, setEvents] = useState<TokenEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (isNaN(networkIdNum) || !tokenId) {
@@ -140,92 +143,83 @@ export default function TokenPage() {
         </Link>
       </div>
 
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Suspense fallback={<Card><CardHeader><CardTitle>Price Chart</CardTitle></CardHeader><CardContent><p>Loading chart...</p></CardContent></Card>}>
-            <TokenChart data={bars} title={`${tokenSymbol || 'Token'} Price Chart`} />
-          </Suspense>
+      {/* 外层容器负责定位按钮，不占用 grid 列 */}
+      <div className="w-full max-w-6xl relative">
+        <div className={cn(
+          "grid gap-6 transition-all duration-300",
+          isSidebarCollapsed ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3"
+        )}>
+          <div className={cn(
+            "space-y-6 transition-all duration-300",
+            !isSidebarCollapsed && "lg:col-span-2"
+          )}>
+            <div className="relative">
+              {isSidebarCollapsed && details && (
+                <button
+                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                  className="hidden lg:flex absolute -top-2 -right-2 p-2 rounded-full bg-background border border-border hover:bg-muted transition-all duration-300 shadow-sm items-center justify-center z-20 cursor-pointer hover:scale-110 active:scale-95 animate-in fade-in slide-in-from-right-2"
+                  aria-label="expand-panel"
+                >
+                  <ChevronLeft className="h-4 w-4 transition-transform duration-300" />
+                </button>
+              )}
+              <Suspense fallback={<Card><CardHeader><CardTitle>Price Chart</CardTitle></CardHeader><CardContent><p>Loading chart...</p></CardContent></Card>}>
+                <TokenChart data={bars} title={`${tokenSymbol || 'Token'} Price Chart`} />
+              </Suspense>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Transactions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {events.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Value (USD)</TableHead>
-                      <TableHead>Tx Hash</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {events.map((event) => (
-                      <TableRow key={event.uniqueId || event.id}>
-                        <TableCell>{event.eventDisplayType || 'N/A'}</TableCell>
-                        <TableCell>{new Date(event.timestamp * 1000).toLocaleString()}</TableCell>
-                        <TableCell>{event.amountUsd ? `$${event.amountUsd.toFixed(2)}` : 'N/A'}</TableCell>
-                        <TableCell className="truncate">
-                          <span title={event.transactionHash}>{event.transactionHash.substring(0, 8)}...</span>
-                        </TableCell>
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {events.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Value (USD)</TableHead>
+                        <TableHead>Tx Hash</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-muted-foreground">No recent transaction data available.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    </TableHeader>
+                    <TableBody>
+                      {events.map((event) => (
+                        <TableRow key={event.uniqueId || event.id}>
+                          <TableCell>{event.eventDisplayType || 'N/A'}</TableCell>
+                          <TableCell>{new Date(event.timestamp * 1000).toLocaleString()}</TableCell>
+                          <TableCell>{event.amountUsd ? `$${event.amountUsd.toFixed(2)}` : 'N/A'}</TableCell>
+                          <TableCell className="truncate">
+                            <span title={event.transactionHash}>{event.transactionHash.substring(0, 8)}...</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-muted-foreground">No recent transaction data available.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-        <div className="lg:col-span-1 space-y-6">
-          {details && (
-            <TradingPanel
-              token={details}
-            />
+          {!isSidebarCollapsed && details && (
+            <div className="hidden lg:block lg:col-span-1 relative">
+              {details && (
+                <button
+                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                  className="absolute -top-2 -right-2 p-2 rounded-full bg-background border border-border hover:bg-muted transition-all duration-300 shadow-sm items-center justify-center z-20 cursor-pointer hover:scale-110 active:scale-95 animate-in fade-in slide-in-from-left-2"
+                  aria-label="folding-panel"
+                >
+                  <ChevronRight className="h-4 w-4 transition-transform duration-300" />
+                </button>
+              )}
+              <TokenSidebar
+                token={details}
+                isCollapsed={false}
+              />
+            </div>
           )}
-
-          <Card>
-            <CardHeader className="flex flex-row items-center space-x-4">
-              {details?.info?.imageThumbUrl ? (
-                <img
-                  src={details.info.imageThumbUrl}
-                  alt={`${details.name || 'Token'} icon`}
-                  width={40}
-                  height={40}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg font-semibold">
-                  {details?.symbol ? details.symbol[0] : 'T'}
-                </div>
-              )}
-              <div>
-                <CardTitle>Information</CardTitle>
-                {details?.symbol && <CardDescription>{details.symbol}</CardDescription>}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {details ? (
-                <>
-                  <p className="text-sm">
-                    <strong className="text-muted-foreground">Address:</strong>
-                    <span className="font-mono block break-all" title={details.address}>{details.address}</span>
-                  </p>
-                  {details.info?.description && (
-                    <p className="text-sm">
-                      <strong className="text-muted-foreground">Description:</strong> {details.info?.description}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-muted-foreground">Token details could not be loaded.</p>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
     </main>
