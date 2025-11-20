@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { useEffect, useState, Suspense } from "react";
 import { TokenChart, ChartDataPoint } from "@/components/TokenChart";
 import { TokenSidebar } from "@/components/TokenSidebar";
+import { TradingPanel } from "@/components/TradingPanel";
+import { DraggableWindow } from "@/components/DraggableWindow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EnhancedToken } from "@codex-data/sdk/dist/sdk/generated/graphql";
@@ -28,6 +30,8 @@ export default function TokenPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isTradingWindowOpen, setIsTradingWindowOpen] = useState(false);
+  const [isDraggingWindow, setIsDraggingWindow] = useState(false);
 
   useEffect(() => {
     if (isNaN(networkIdNum) || !tokenId) {
@@ -205,7 +209,7 @@ export default function TokenPage() {
 
           {!isSidebarCollapsed && details && (
             <div className="hidden lg:block lg:col-span-1 relative">
-              {details && (
+              {details && !isDraggingWindow && (
                 <button
                   onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                   className="absolute -top-2 -right-2 p-2 rounded-full bg-background border border-border hover:bg-muted transition-all duration-300 shadow-sm items-center justify-center z-20 cursor-pointer hover:scale-110 active:scale-95 animate-in fade-in slide-in-from-left-2"
@@ -217,11 +221,33 @@ export default function TokenPage() {
               <TokenSidebar
                 token={details}
                 isCollapsed={false}
+                onOpenTradingWindow={() => setIsTradingWindowOpen(true)}
+                hideTradingPanel={isTradingWindowOpen}
               />
             </div>
           )}
         </div>
       </div>
+
+      {/* 可拖拽的交易窗口 */}
+      {isTradingWindowOpen && details && (
+        <DraggableWindow
+          title={`Trade ${details.symbol || details.name || "Token"}`}
+          initialPosition={{ 
+            x: typeof window !== 'undefined' ? window.innerWidth - 450 : 100, 
+            y: 100 
+          }}
+          initialSize={{ width: 400, height: 600 }}
+          minWidth={300}
+          minHeight={400}
+          onDragStart={() => setIsDraggingWindow(true)}
+          onDragEnd={() => setIsDraggingWindow(false)}
+          onClose={() => setIsTradingWindowOpen(false)}
+        >
+          <TradingPanel token={details} onOpenWindow={undefined} />
+        </DraggableWindow>
+      )}
+
     </main>
   );
 }

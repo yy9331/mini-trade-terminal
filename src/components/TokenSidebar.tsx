@@ -5,9 +5,11 @@ import { EnhancedToken } from "@codex-data/sdk/dist/sdk/generated/graphql";
 interface TokenSidebarProps {
   token: EnhancedToken | undefined;
   isCollapsed: boolean;
+  onOpenTradingWindow?: () => void;
+  hideTradingPanel?: boolean;
 }
 
-export function TokenSidebar({ token, isCollapsed }: TokenSidebarProps) {
+export function TokenSidebar({ token, isCollapsed, onOpenTradingWindow, hideTradingPanel = false }: TokenSidebarProps) {
   if (!token || isCollapsed) {
     return null;
   }
@@ -15,7 +17,9 @@ export function TokenSidebar({ token, isCollapsed }: TokenSidebarProps) {
   // 展开状态：显示完整内容
   return (
     <div className="lg:col-span-1 space-y-6">
-      <TradingPanel token={token} />
+      {!hideTradingPanel && (
+        <TradingPanel token={token} onOpenWindow={onOpenTradingWindow} />
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center space-x-4">

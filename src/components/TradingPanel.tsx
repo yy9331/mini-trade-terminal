@@ -7,12 +7,14 @@ import { EnhancedToken } from "@codex-data/sdk/dist/sdk/generated/graphql";
 import { useBalance } from "@/hooks/use-balance";
 import { useTrade } from "@/hooks/use-trade";
 import { confirmTransaction, createConnection, createKeypair, sendTransaction, signTransaction } from "@/lib/solana";
+import { Maximize2 } from "lucide-react";
 
 interface TradingPanelProps {
-  token: EnhancedToken
+  token: EnhancedToken;
+  onOpenWindow?: () => void;
 }
 
-export function TradingPanel({ token }: TradingPanelProps) {
+export function TradingPanel({ token, onOpenWindow }: TradingPanelProps) {
   const tokenSymbol = token.symbol;
   const [tradeMode, setTradeMode] = useState<"buy" | "sell">("buy");
   const [buyAmount, setBuyAmount] = useState("");
@@ -78,15 +80,27 @@ export function TradingPanel({ token }: TradingPanelProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Trade {tokenSymbol || "Token"}</CardTitle>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(keypair.publicKey.toBase58());
-              toast.success("Wallet address copied!");
-            }}
-            className="text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer"
-          >
-            {keypair.publicKey.toBase58().slice(0, 4)}...{keypair.publicKey.toBase58().slice(-4)}
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenWindow && (
+              <button
+                onClick={onOpenWindow}
+                className="p-1.5 rounded hover:bg-muted transition-colors"
+                aria-label="Open in draggable window"
+                title="Open in draggable window"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(keypair.publicKey.toBase58());
+                toast.success("Wallet address copied!");
+              }}
+              className="text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer"
+            >
+              {keypair.publicKey.toBase58().slice(0, 4)}...{keypair.publicKey.toBase58().slice(-4)}
+            </button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
