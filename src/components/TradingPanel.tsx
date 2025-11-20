@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 import { EnhancedToken } from "@codex-data/sdk/dist/sdk/generated/graphql";
 import { useBalance } from "@/hooks/use-balance";
 import { useTrade } from "@/hooks/use-trade";
-import { confirmTransaction, createConnection, createKeypair, sendTransaction, signTransaction } from "@/lib/solana";
+import { useTogglePreset } from "@/hooks/use-toggle-preset";
+import { useOneClickTrade } from "@/hooks/use-one-click-trade";
+import { createKeypair } from "@/lib/solana";
 import { Maximize2 } from "lucide-react";
 
 interface TradingPanelProps {
@@ -17,45 +19,31 @@ interface TradingPanelProps {
 export function TradingPanel({ token, onOpenWindow }: TradingPanelProps) {
   const tokenSymbol = token.symbol;
   const [tradeMode, setTradeMode] = useState<"buy" | "sell">("buy");
-  const [buyAmount, setBuyAmount] = useState("");
-  const [sellPercentage, setSellPercentage] = useState("");
   
   const { nativeBalance: solanaBalance, tokenBalance, tokenAtomicBalance, loading, refreshBalance } = useBalance(token.address, Number(token.decimals), 9, Number(token.networkId));
   const { createTransaction } = useTrade(token.address, tokenAtomicBalance);
 
-  const keypair = createKeypair(import.meta.env.VITE_SOLANA_PRIVATE_KEY);
-  const connection = createConnection();
+  // Use toggle preset hooks for buy amount and sell percentage
+  const {
+    value: buyAmount,
+    setValue: setBuyAmount,
+    togglePreset: toggleBuyAmount,
+  } = useTogglePreset<number>();
+  
+  const {
+    value: sellPercentage,
+    setValue: setSellPercentage,
+    togglePreset: toggleSellPercentage,
+  } = useTogglePreset<number>();
 
-  const handleTrade = useCallback(async () => {
-    const toastId = toast.loading("Submitting trade request...");
-    try {
-      const transaction =
-        await createTransaction({ 
-          direction: tradeMode, 
-          value: tradeMode === "buy" ? parseFloat(buyAmount) : parseFloat(sellPercentage), 
-          signer: keypair.publicKey 
-        });
-
-      toast.loading("Signing transaction...", { id: toastId });
-      const signedTransaction = signTransaction(keypair, transaction);
-
-      toast.loading("Sending transaction...", { id: toastId });
-      const signature = await sendTransaction(signedTransaction, connection);
-
-      toast.loading("Confirming transaction...", { id: toastId });
-      const confirmation = await confirmTransaction(signature, connection);
-
-      if (confirmation.value.err) {
-        throw new Error("Trade failed");
-      }
-      toast.success(`Trade successful! TX: ${signature.slice(0, 8)}...`, { id: toastId }); 
-
-      // Refresh balance after 1 second
-      setTimeout(refreshBalance, 1000);
-    } catch (error) {
-      toast.error((error as Error).message, { id: toastId });
-    }
-  }, [tradeMode, buyAmount, sellPercentage, createTransaction, keypair, connection, refreshBalance]);
+  // Use one-click trade hook
+  const { handleTrade, keypair } = useOneClickTrade({
+    tradeMode,
+    buyAmount,
+    sellPercentage,
+    createTransaction,
+    refreshBalance,
+  });
 
   const solBuyAmountPresets = [0.0001, 0.001, 0.01, 0.1];
   const percentagePresets = [25, 50, 75, 100];
@@ -150,14 +138,7 @@ export function TradingPanel({ token, onOpenWindow }: TradingPanelProps) {
               {solBuyAmountPresets.map((preset) => (
                 <button
                   key={preset}
-                  onClick={() => {
-                    // Toggle: if already selected, deselect; otherwise select
-                    if (buyAmount === preset.toString()) {
-                      setBuyAmount("");
-                    } else {
-                      setBuyAmount(preset.toString());
-                    }
-                  }}
+                  onClick={() => toggleBuyAmount(preset)}
                   className={cn(
                     "py-2.5 px-3 rounded-lg text-sm font-semibold transition-all cursor-pointer",
                     buyAmount === preset.toString()
@@ -195,14 +176,7 @@ export function TradingPanel({ token, onOpenWindow }: TradingPanelProps) {
               {percentagePresets.map((preset) => (
                 <button
                   key={preset}
-                  onClick={() => {
-                    // Toggle: if already selected, deselect; otherwise select
-                    if (sellPercentage === preset.toString()) {
-                      setSellPercentage("");
-                    } else {
-                      setSellPercentage(preset.toString());
-                    }
-                  }}
+                  onClick={() => toggleSellPercentage(preset)}
                   className={cn(
                     "py-2.5 px-3 rounded-lg text-sm font-semibold transition-all cursor-pointer",
                     sellPercentage === preset.toString()
